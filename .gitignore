@@ -1,0 +1,53 @@
+# Virtual environments
+env/
+venv/
+.venv/
+
+# Uploaded / generated data
+data/uploads/
+data/tmp/
+data/*.pdf
+data/*.docx
+data/*.txt
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Secrets
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Testing
+.coverage
+.pytest_cache/
+
+# Model / HF cache
+.cache/
+hf_cache/
+
+# Large model files
+*.bin
+*.pt
+*.pth
+*.onnx
