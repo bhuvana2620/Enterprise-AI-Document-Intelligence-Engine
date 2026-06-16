@@ -69,6 +69,7 @@ COPY --from=builder /opt/venv /opt/venv
 
 COPY --chown=appuser:appuser src/ /app/src/
 COPY --chown=appuser:appuser app.py /app/app.py
+COPY --chown=appuser:appuser .streamlit/ /app/.streamlit/
 COPY --chown=appuser:appuser start.sh /app/start.sh
 COPY --chown=appuser:appuser requirements.txt /app/requirements.txt
 

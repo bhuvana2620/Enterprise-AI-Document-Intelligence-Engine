@@ -36,6 +36,9 @@ streamlit run app.py \
   --server.port="${FRONTEND_PORT}" \
   --server.address=0.0.0.0 \
   --server.headless=true \
+  --server.enableXsrfProtection=false \
+  --server.enableCORS=false \
+  --server.maxUploadSize=200 \
   --browser.gatherUsageStats=false &
 FRONTEND_PID=$!
 
