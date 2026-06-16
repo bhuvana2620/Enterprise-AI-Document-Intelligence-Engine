@@ -1,0 +1,27 @@
+# Python envs
+env/
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Secrets
+.env
+
+# Git/system
+.git/
+.gitignore
+.DS_Store
+
+# Private/local uploaded documents
+data/uploads/
+data/tmp/
+*.pdf
+*.docx
+
+# Logs/cache
+*.log
+.cache/

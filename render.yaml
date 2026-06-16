@@ -1,0 +1,127 @@
+services:
+  - type: web
+    name: ai-document-intelligence
+    runtime: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+
+      - key: PYTHONPATH
+        value: /app
+
+      - key: PINECONE_API_KEY
+        sync: false
+
+      - key: GEMINI_API_KEY
+        sync: false
+
+      - key: XAI_API_KEY
+        sync: false
+
+      - key: PINECONE_INDEX_NAME
+        value: ai-document-intelligence
+
+      - key: PINECONE_CLOUD
+        value: aws
+
+      - key: PINECONE_REGION
+        value: us-east-1
+
+      - key: PINECONE_NAMESPACE
+        value: render-default-session
+
+      - key: PINECONE_UPSERT_BATCH_SIZE
+        value: "25"
+
+      - key: EMBEDDING_PROVIDER
+        value: sentence_transformer
+
+      - key: EMBEDDING_MODEL
+        value: BAAI/bge-small-en-v1.5
+
+      - key: EMBEDDING_DIMENSION
+        value: "384"
+
+      - key: EMBEDDING_BATCH_SIZE
+        value: "8"
+
+      - key: ENABLE_RERANKER
+        value: "true"
+
+      - key: RERANKER_MODEL
+        value: BAAI/bge-reranker-base
+
+      - key: ENABLE_HYBRID_SEARCH
+        value: "false"
+
+      - key: ENABLE_OCR
+        value: "true"
+
+      - key: OCR_MIN_TEXT_LENGTH
+        value: "200"
+
+      - key: LLM_PROVIDER
+        value: auto
+
+      - key: MOCK_LLM_MODE
+        value: "false"
+
+      - key: GEMINI_MODEL
+        value: gemini-3.1-flash-lite
+
+      - key: GEMINI_FALLBACK_MODELS
+        value: gemini-2.5-flash-lite,gemini-2.0-flash-lite
+
+      - key: XAI_BASE_URL
+        value: https://api.x.ai/v1
+
+      - key: XAI_MODEL
+        value: grok-4.3
+
+      - key: LLM_MAX_RETRIES
+        value: "3"
+
+      - key: SHOW_LLM_FALLBACK_REASON
+        value: "true"
+
+      - key: TOKENIZERS_PARALLELISM
+        value: "false"
+
+      - key: OMP_NUM_THREADS
+        value: "1"
+
+      - key: MKL_NUM_THREADS
+        value: "1"
+
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+
+  - type: web
+    name: ai-document-intelligence-frontend
+    runtime: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: streamlit run app.py --server.port=$PORT --server.address=0.0.0.0
+    healthCheckPath: /_stcore/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHONPATH
+        value: /app
+
+      - key: API_BASE_URL
+        value: https://ai-document-intelligence-bp0m.onrender.com
+
+      - key: MAX_UPLOAD_RETRIES
+        value: "6"
+
+      - key: UPLOAD_BASE_RETRY_DELAY_SECONDS
+        value: "20"
