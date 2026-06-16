@@ -1,14 +1,3 @@
----
-title: Enterprise AI Document Intelligence Engine
-emoji: 📄
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 7860
-pinned: false
-license: mit
----
-
 # Enterprise AI Document Intelligence Engine
 
 A full stack Retrieval Augmented Generation application that lets users upload documents and ask questions about them in natural language. The system uses FastAPI, Streamlit, Pinecone, semantic embeddings, and Google Gemini to provide document grounded answers through a deployed Hugging Face Spaces application.
