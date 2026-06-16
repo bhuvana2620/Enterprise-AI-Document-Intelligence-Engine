@@ -7,8 +7,9 @@
 # Hugging Face Spaces only exposes one port (default 7860) and runs one
 # CMD, so the backend is started first as a background process on
 # BACKEND_PORT (default 8000, internal only), then the Streamlit frontend
-# is started in the foreground on FRONTEND_PORT (7860), which HF Spaces
-# routes external traffic to.
+# is started in the background on FRONTEND_PORT (7860), which HF Spaces
+# routes external traffic to. A polling loop then supervises both PIDs,
+# since the base image's /bin/sh (dash) does not support `wait -n`.
 
 set -e
 
@@ -38,11 +39,27 @@ streamlit run app.py \
   --browser.gatherUsageStats=false &
 FRONTEND_PID=$!
 
+echo "[start.sh] Supervising backend (PID ${BACKEND_PID}) and frontend (PID ${FRONTEND_PID})..."
+
+# dash's `wait` has no -n flag, so poll both PIDs instead.
 # If either process dies, bring the whole container down so the
 # orchestrator (HF Spaces) restarts it cleanly.
-wait -n "${BACKEND_PID}" "${FRONTEND_PID}"
-EXIT_CODE=$?
+while true; do
+  if ! kill -0 "${BACKEND_PID}" 2>/dev/null; then
+    echo "[start.sh] Backend process exited unexpectedly."
+    EXIT_CODE=1
+    break
+  fi
 
-echo "[start.sh] A process exited (code ${EXIT_CODE}). Shutting down container."
+  if ! kill -0 "${FRONTEND_PID}" 2>/dev/null; then
+    echo "[start.sh] Frontend process exited unexpectedly."
+    EXIT_CODE=1
+    break
+  fi
+
+  sleep 2
+done
+
+echo "[start.sh] Shutting down container (exit code ${EXIT_CODE})."
 kill "${BACKEND_PID}" "${FRONTEND_PID}" 2>/dev/null || true
 exit "${EXIT_CODE}"
