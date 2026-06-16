@@ -1,6 +1,6 @@
 # Enterprise AI Document Intelligence Engine
 
-A full stack Retrieval Augmented Generation application that lets users upload documents and ask questions about them in natural language. The system uses FastAPI, Streamlit, Pinecone, semantic embeddings, and Google Gemini to provide document grounded answers through a deployed Hugging Face Spaces application.
+A full stack Retrieval Augmented Generation application that lets users upload documents and ask questions about them in natural language. The system uses FastAPI, Streamlit, Pinecone, semantic embeddings, Google Gemini, and optional xAI Grok fallback to provide document grounded answers through a deployed Hugging Face Spaces application.
 
 **Live Demo:** [https://huggingface.co/spaces/bhuvaneswari2620/enterprise-document-intelligence-engine](https://huggingface.co/spaces/bhuvaneswari2620/enterprise-document-intelligence-engine)
 
@@ -13,7 +13,6 @@ Enterprise AI Document Intelligence Engine is designed as a production style RAG
 The application is deployed as a single Docker based Hugging Face Space, with Streamlit serving the user interface and FastAPI running as the internal backend service.
 
 ---
-
 ## Key Features
 
 - Upload PDF, TXT, and DOCX documents
@@ -21,13 +20,14 @@ The application is deployed as a single Docker based Hugging Face Space, with St
 - Generate semantic embeddings using SentenceTransformers
 - Store and retrieve document chunks using Pinecone
 - Ask natural language questions over uploaded documents
-- Generate answers using Google Gemini
+- Generate answers using Google Gemini, with optional xAI Grok fallback when `LLM_PROVIDER=auto`
 - Stream answers back to the frontend
 - Use isolated Pinecone namespaces for each browser session
 - Clear active session data using the End Session action
 - Support local and containerized execution
 - Include unit tests for core text processing components
 - Provide a custom evaluation harness for RAG quality testing
+
 
 ---
 
@@ -82,7 +82,7 @@ Both the frontend and backend run inside one Docker container. Hugging Face Spac
 | Backend | FastAPI, Uvicorn |
 | Vector Database | Pinecone Serverless |
 | Embeddings | SentenceTransformers, BAAI/bge-small-en-v1.5 |
-| LLM | Google Gemini |
+| LLM | Google Gemini with optional xAI Grok fallback |
 | Document Processing | PyMuPDF, PyPDF2, python-docx |
 | API Style | REST and Server Sent Events |
 | Deployment | Hugging Face Spaces with Docker |
@@ -133,28 +133,24 @@ Both the frontend and backend run inside one Docker container. Hugging Face Spac
 
 ---
 
-## Engineering Decisions
+## Engineering Decisions 
 
 ### Single Container Deployment
-
 Hugging Face Docker Spaces expose one public port. To support both frontend and backend inside one container, the project uses `start.sh` to launch FastAPI on the internal backend port and Streamlit on the public frontend port.
 
 ### Session Scoped Namespaces
-
 Each browser session uses a separate Pinecone namespace. This prevents documents uploaded in one session from mixing with another user session.
 
 ### Manual Session Cleanup
+The current version supports explicit cleanup through the End Session button. When clicked, the app clears the active Pinecone namespace for that session. Browser refresh or tab close does not reliably send a cleanup request to the backend, so automatic cleanup for abandoned sessions is listed as a future enhancement.
 
-The current version supports explicit cleanup through the End Session button. When clicked, the app clears the active Pinecone namespace for that session.
-
-Browser refresh or tab close does not reliably send a cleanup request to the backend, so automatic cleanup for abandoned sessions is listed as a future enhancement.
+### LLM Provider Fallback
+The application supports a pluggable LLM provider router. In `auto` mode, the backend attempts Google Gemini first, falls back to xAI Grok if Gemini fails or rate limits, and finally returns a mock diagnostic response if all live providers are unavailable.
 
 ### Embedding Provider Flexibility
-
 The embedding layer supports semantic embeddings and lightweight fallback behavior. This makes the project easier to run in constrained environments while still supporting production quality embeddings.
 
 ### Evaluation Hooks
-
 The project includes a gated evaluation script for measuring answer quality. Live evaluation is disabled by default and can be enabled through environment variables.
 
 ---
@@ -166,23 +162,45 @@ Create a `.env` file locally using `.env.example`.
 ```env
 PINECONE_API_KEY=
 GEMINI_API_KEY=
+XAI_API_KEY=
 
 PINECONE_INDEX_NAME=ai-document-intelligence
+PINECONE_CLOUD=aws
 PINECONE_REGION=us-east-1
+PINECONE_UPSERT_BATCH_SIZE=100
 
 EMBEDDING_PROVIDER=sentence_transformer
 EMBEDDING_MODEL_NAME=BAAI/bge-small-en-v1.5
+EMBEDDING_DEVICE=cpu
 EMBEDDING_DIMENSION=384
+EMBEDDING_BATCH_SIZE=8
+EMBEDDING_MAX_SEQ_LENGTH=512
 
 ENABLE_HYBRID_SEARCH=false
-LLM_PROVIDER=gemini
+ENABLE_RERANKER=false
+RERANKER_MODEL=BAAI/bge-reranker-base
+
+ENABLE_OCR=false
+OCR_MIN_TEXT_LENGTH=200
+
+LLM_PROVIDER=auto
+MOCK_LLM_MODE=false
 GEMINI_MODEL=gemini-2.0-flash
+GEMINI_FALLBACK_MODELS=gemini-1.5-flash
+XAI_BASE_URL=https://api.x.ai/v1
+XAI_MODEL=grok-4.3
+LLM_MAX_RETRIES=3
+SHOW_LLM_FALLBACK_REASON=true
 
 BACKEND_PORT=8000
 FRONTEND_PORT=7860
+API_BASE_URL=http://localhost:8000
+
+MAX_UPLOAD_RETRIES=3
+UPLOAD_BASE_RETRY_DELAY_SECONDS=2
 
 RUN_EVAL=false
-```
+````
 
 For Hugging Face Spaces, store API keys as Secrets and non sensitive configuration as Variables.
 
@@ -191,22 +209,48 @@ Recommended Hugging Face Secrets:
 ```text
 PINECONE_API_KEY
 GEMINI_API_KEY
+XAI_API_KEY
 ```
 
 Recommended Hugging Face Variables:
 
 ```text
 PINECONE_INDEX_NAME=ai-document-intelligence
+PINECONE_CLOUD=aws
 PINECONE_REGION=us-east-1
+PINECONE_UPSERT_BATCH_SIZE=100
+
+EMBEDDING_PROVIDER=sentence_transformer
+EMBEDDING_MODEL_NAME=BAAI/bge-small-en-v1.5
+EMBEDDING_DEVICE=cpu
+EMBEDDING_DIMENSION=384
+EMBEDDING_BATCH_SIZE=8
+EMBEDDING_MAX_SEQ_LENGTH=512
+
 ENABLE_HYBRID_SEARCH=false
-LLM_PROVIDER=gemini
+ENABLE_RERANKER=false
+RERANKER_MODEL=BAAI/bge-reranker-base
+
+ENABLE_OCR=false
+OCR_MIN_TEXT_LENGTH=200
+
+LLM_PROVIDER=auto
+MOCK_LLM_MODE=false
 GEMINI_MODEL=gemini-2.0-flash
+GEMINI_FALLBACK_MODELS=gemini-1.5-flash
+XAI_BASE_URL=https://api.x.ai/v1
+XAI_MODEL=grok-4.3
+LLM_MAX_RETRIES=3
+SHOW_LLM_FALLBACK_REASON=true
+
 BACKEND_PORT=8000
 FRONTEND_PORT=7860
+API_BASE_URL=http://localhost:8000
+
+MAX_UPLOAD_RETRIES=3
+UPLOAD_BASE_RETRY_DELAY_SECONDS=2
 RUN_EVAL=false
 ```
-
----
 
 ## Running Locally
 
